@@ -1,0 +1,11 @@
+{
+  "/medical-shop/daily-dispense-history/export/route": "/medical-shop/daily-dispense-history/export",
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/auth/page": "/auth",
+  "/doctor/page": "/doctor",
+  "/page": "/",
+  "/patient/page": "/patient",
+  "/medical-shop/page": "/medical-shop",
+  "/medical-shop/daily-dispense-history/page": "/medical-shop/daily-dispense-history"
+}

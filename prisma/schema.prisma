@@ -1,0 +1,302 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Hospital {
+  id               String               @id @default(cuid())
+  name             String               @unique
+  users            User[]
+  appointments     Appointment[]
+  diagnostics      DiagnosticBooking[]
+  dailySlotConfigs DailySlotConfig[]
+  serviceConfigs   ServiceSlotConfig[]
+  serviceBookings  ServiceBooking[]
+  telemedicine     TelemedicineRequest[]
+  bloodBankItems   BloodBankItem[]
+  bloodRequests    BloodRequest[]
+  inventoryItems   InventoryItem[]
+  otpCodes         OtpCode[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
+model User {
+  id              String                 @id @default(cuid())
+  name            String
+  email           String                 @unique
+  role            String
+  phone           String?
+  govtId          String?
+  hospitalId      String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  hospital        Hospital?              @relation(fields: [hospitalId], references: [id])
+  doctor          Doctor?
+  appointments    Appointment[]          @relation("PatientAppointments")
+  diagnostics     DiagnosticBooking[]
+  telemedicine    TelemedicineRequest[]  @relation("PatientTelemedicine")
+  bloodRequests   BloodRequest[]
+  serviceBookings ServiceBooking[]
+  otps            OtpCode[]
+  medicineLogs    MedicineDispense[]     @relation("DispensedByUser")
+}
+
+model Doctor {
+  id             String                 @id @default(cuid())
+  userId         String                 @unique
+  department     String
+  availability   String
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments   Appointment[]
+  serviceBookings ServiceBooking[]
+  telemedicine   TelemedicineRequest[]  @relation("ScheduledDoctor")
+  preferredFor   TelemedicineRequest[]  @relation("PreferredDoctor")
+  alternativeFor TelemedicineRequest[]  @relation("AlternativeDoctor")
+}
+
+model DailySlotConfig {
+  id                    String              @id @default(cuid())
+  date                  DateTime
+  hospitalId            String?
+  publicSlots           Int
+  emergencyReserveSlots Int
+  mriSlots              Int
+  xraySlots             Int
+  bloodReportSlots      Int
+  mriStartTime          String              @default("09:00")
+  mriEndTime            String              @default("17:00")
+  xrayStartTime         String              @default("09:00")
+  xrayEndTime           String              @default("17:00")
+  bloodReportStartTime  String              @default("09:00")
+  bloodReportEndTime    String              @default("17:00")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  hospital              Hospital?           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  appointments          Appointment[]
+  diagnostics           DiagnosticBooking[]
+
+  @@unique([date, hospitalId])
+}
+
+model Appointment {
+  id                 String            @id @default(cuid())
+  date               DateTime
+  hospitalId         String?
+  serialNumber       Int
+  estimatedStart     String
+  estimatedEnd       String
+  priority           String
+  source             String
+  reason             String?
+  status             String          @default("BOOKED")
+  patientId          String
+  doctorId           String?
+  dailySlotConfigId  String
+  hospital           Hospital?         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient            User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctor             Doctor?           @relation(fields: [doctorId], references: [id])
+  dailySlotConfig    DailySlotConfig   @relation(fields: [dailySlotConfigId], references: [id], onDelete: Cascade)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  prescription       Prescription?
+  medicineDispenses  MedicineDispense[]
+
+  @@index([date, source])
+  @@index([hospitalId, date])
+}
+
+model Prescription {
+  id            String      @id @default(cuid())
+  appointmentId String      @unique
+  medicines     String
+  tests         String?
+  advice        String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+}
+
+model DiagnosticBooking {
+  id                String           @id @default(cuid())
+  date              DateTime
+  hospitalId        String?
+  serialNumber      Int
+  type              String
+  estimatedStart    String           @default("")
+  estimatedEnd      String           @default("")
+  status            String           @default("BOOKED")
+  patientId         String
+  dailySlotConfigId String
+  hospital          Hospital?        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient           User             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  dailySlotConfig   DailySlotConfig  @relation(fields: [dailySlotConfigId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+
+  @@index([date, type])
+  @@index([hospitalId, date])
+}
+
+model InventoryItem {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  stock       Int
+  unit        String
+  hospitalId  String?
+  updatedAt   DateTime          @updatedAt
+  hospital    Hospital?         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  dispenses   MedicineDispense[]
+
+  @@unique([hospitalId, name])
+}
+
+model ServiceSlotConfig {
+  id          String           @id @default(cuid())
+  date        DateTime
+  hospitalId  String?
+  serviceType String
+  slotCount   Int
+  startTime   String
+  endTime     String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  hospital    Hospital?        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  bookings    ServiceBooking[]
+
+  @@unique([date, hospitalId, serviceType])
+}
+
+model ServiceBooking {
+  id                  String            @id @default(cuid())
+  serviceType         String
+  date                DateTime
+  hospitalId          String?
+  requestedTime       String?
+  serialNumber        Int
+  estimatedStart      String
+  estimatedEnd        String
+  adminTimingNote     String?
+  consultationType    String?
+  preferredHospital   String?
+  contactNumber       String?
+  location            String?
+  bloodType           String?
+  quantity            Int?
+  manualMedicineText  String?
+  prescriptionImagePath String?
+  feeAmount           Int               @default(0)
+  reason              String?
+  status              String            @default("BOOKED")
+  patientId           String
+  doctorId            String?
+  serviceSlotConfigId String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  hospital            Hospital?         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient             User              @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor              Doctor?           @relation(fields: [doctorId], references: [id])
+  serviceSlotConfig   ServiceSlotConfig @relation(fields: [serviceSlotConfigId], references: [id], onDelete: Cascade)
+  telemedicineRequest TelemedicineRequest?
+  bloodRequest        BloodRequest?
+  medicineDispenses   MedicineDispense[]
+
+  @@index([date, serviceType])
+  @@index([hospitalId, date, serviceType])
+  @@index([patientId, createdAt])
+}
+
+model TelemedicineRequest {
+  id                         String    @id @default(cuid())
+  reason                     String
+  preferredTime              String?
+  scheduledTime              String?
+  status                     String    @default("REQUESTED")
+  doctorDecision             String?
+  hospitalId                 String?
+  patientId                  String
+  doctorId                   String?
+  preferredDoctorId          String?
+  alternativeDoctorId        String?
+  alternativeForPreferredTime String?
+  serviceBookingId           String?   @unique
+  hospital       Hospital?          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient       User               @relation("PatientTelemedicine", fields: [patientId], references: [id], onDelete: Cascade)
+  doctor        Doctor?            @relation("ScheduledDoctor", fields: [doctorId], references: [id])
+  preferredDoctor Doctor?          @relation("PreferredDoctor", fields: [preferredDoctorId], references: [id])
+  alternativeDoctor Doctor?        @relation("AlternativeDoctor", fields: [alternativeDoctorId], references: [id])
+  serviceBooking ServiceBooking?   @relation(fields: [serviceBookingId], references: [id], onDelete: SetNull)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+}
+
+model BloodBankItem {
+  id        String   @id @default(cuid())
+  hospitalId String?
+  bloodType String
+  pouches   Int
+  updatedAt DateTime @updatedAt
+  hospital  Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, bloodType])
+}
+
+model BloodRequest {
+  id          String   @id @default(cuid())
+  hospitalId   String?
+  serialNumber Int      @default(0)
+  bloodType   String
+  pouches     Int
+  reason      String
+  preferredTime String?
+  status      String   @default("PENDING")
+  patientId   String
+  approvedByDoctorId String?
+  serviceBookingId String?   @unique
+  hospital    Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient     User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  serviceBooking ServiceBooking? @relation(fields: [serviceBookingId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String
+  role      String
+  name      String
+  hospitalId String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  userId    String?
+  hospital  Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, role])
+}
+
+model MedicineDispense {
+  id             String       @id @default(cuid())
+  appointmentId  String?
+  serviceBookingId String?
+  dispenseCategory String
+  inventoryItemId String
+  quantity       Int
+  note           String?
+  dispensedById  String
+  createdAt      DateTime     @default(now())
+  appointment    Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceBooking ServiceBooking? @relation(fields: [serviceBookingId], references: [id], onDelete: Cascade)
+  inventoryItem  InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  dispensedBy    User         @relation("DispensedByUser", fields: [dispensedById], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@index([serviceBookingId])
+  @@index([inventoryItemId])
+}

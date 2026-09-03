@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: 246 248 247;
+  --bg-accent: 230 243 241;
+  --surface: 255 255 255;
+  --surface-muted: 248 250 252;
+  --border: 226 232 240;
+  --text: 23 32 42;
+  --text-muted: 71 85 105;
+  --placeholder: 148 163 184;
+  --color-clinic: 14 124 134;
+  --color-leaf: 78 154 81;
+  --color-amber: 229 161 0;
+  --color-coral: 217 95 67;
+  --shadow-panel: 0 14px 40px rgba(20, 35, 45, 0.08);
+}
+
+:root[data-theme="meadow"] {
+  --color-clinic: 38 122 108;
+  --color-leaf: 86 166 95;
+  --color-amber: 214 144 0;
+  --color-coral: 198 96 74;
+}
+
+:root[data-theme="sunrise"] {
+  --color-clinic: 176 93 42;
+  --color-leaf: 112 144 72;
+  --color-amber: 210 122 22;
+  --color-coral: 201 78 63;
+}
+
+:root[data-mode="dark"] {
+  color-scheme: dark;
+  --bg: 12 18 24;
+  --bg-accent: 18 29 36;
+  --surface: 24 34 43;
+  --surface-muted: 31 43 53;
+  --border: 61 79 94;
+  --text: 232 240 246;
+  --text-muted: 161 177 191;
+  --placeholder: 123 142 158;
+  --shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-mode="dark"][data-theme="meadow"] {
+  --color-clinic: 94 198 171;
+  --color-leaf: 129 207 130;
+  --color-amber: 242 189 72;
+  --color-coral: 235 134 109;
+}
+
+:root[data-mode="dark"][data-theme="sunrise"] {
+  --color-clinic: 242 162 104;
+  --color-leaf: 171 206 116;
+  --color-amber: 248 183 88;
+  --color-coral: 241 126 108;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(rgba(246, 248, 247, 0.84), rgba(246, 248, 247, 0.84)),
+    radial-gradient(circle at top left, rgb(var(--bg-accent)) 0%, transparent 35%),
+    url("/ashwin-light-bg.png"),
+    rgb(var(--bg));
+  background-position: center, top left, center 8rem, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: cover, auto, min(78vw, 1080px), auto;
+  color: rgb(var(--text));
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+:root[data-mode="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgb(var(--bg-accent)) 0%, transparent 35%),
+    rgb(var(--bg));
+  background-position: top left, center;
+  background-repeat: no-repeat, no-repeat;
+  background-size: auto, auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+.focus-ring {
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clinic;
+}
