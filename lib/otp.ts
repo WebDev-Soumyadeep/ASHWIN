@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Role } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
-import { enqueueOtpEmail } from "@/lib/rabbitmq";
+import { sendOtpEmail } from "@/lib/mail";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -33,7 +33,7 @@ export async function createAndSendOtp(input: {
     }
   });
 
-  await enqueueOtpEmail({
+  await sendOtpEmail({
     email,
     name: input.name.trim(),
     role: input.role,

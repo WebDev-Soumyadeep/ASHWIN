@@ -1,28 +1,37 @@
-import nodemailer from "nodemailer";
-import type { OtpEmailJob } from "@/lib/rabbitmq";
+import { Resend } from "resend";
+import type { Role } from "@/lib/domain";
 
-export async function sendOtpEmail(job: OtpEmailJob) {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-  if (!user || !pass) {
-    if (process.env.OTP_DEV_FALLBACK === "true") {
-      console.log("[OTP_EMAIL_MOCK]", job);
-      return;
-    }
-    throw new Error("GMAIL_USER and GMAIL_APP_PASSWORD are required.");
+export async function sendOtpEmail(job: {
+  email: string;
+  name: string;
+  role: Role;
+  code: string;
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is required.");
   }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user, pass }
+  const { data, error } = await resend.emails.send({
+    from: "MedSynapse <onboarding@resend.dev>",
+    to: [job.email],
+    subject: "Your MedSynapse OTP",
+    html: `
+      <div>
+        <h2>MedSynapse</h2>
+        <p>Hello ${job.name},</p>
+        <p>Your ${job.role.toLowerCase()} login OTP is:</p>
+        <h1>${job.code}</h1>
+        <p>This OTP expires in 10 minutes.</p>
+      </div>
+    `
   });
 
-  await transporter.sendMail({
-    from: `"Ashwin HealthCare System" <${user}>`,
-    to: job.email,
-    subject: "Your Ashwin HealthCare System OTP",
-    text: `Hello ${job.name}, your ${job.role.toLowerCase()} login OTP is ${job.code}. It expires in 10 minutes.`,
-    html: `<p>Hello ${job.name},</p><p>Your <strong>${job.role.toLowerCase()}</strong> login OTP is <strong>${job.code}</strong>.</p><p>It expires in 10 minutes.</p>`
-  });
+  if (error) {
+    console.error("Resend error:", error);
+    throw new Error(error.message);
+  }
+
+  console.log("OTP email sent:", data?.id);
 }
