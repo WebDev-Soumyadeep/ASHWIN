@@ -1,6 +1,5 @@
 import amqp from "amqplib";
-import { OTP_QUEUE, type OtpEmailJob } from "@/lib/rabbitmq";
-import { sendOtpEmail } from "@/lib/mail";
+import { OTP_QUEUE, type OtpDisplayJob } from "@/lib/rabbitmq";
 
 async function main() {
   const url = process.env.RABBITMQ_URL ?? "amqp://localhost";
@@ -16,12 +15,11 @@ async function main() {
     if (!message) return;
 
     try {
-      const job = JSON.parse(message.content.toString()) as OtpEmailJob;
-      await sendOtpEmail(job);
+      const job = JSON.parse(message.content.toString()) as OtpDisplayJob;
       channel.ack(message);
-      console.log(`Sent OTP email to ${job.email}`);
+      console.log(`[OTP_LOCAL_DELIVERY] ${job.email} (${job.role}): ${job.code}`);
     } catch (error) {
-      console.error("Failed to process OTP email", error);
+      console.error("Failed to process OTP display job", error);
       channel.nack(message, false, true);
     }
   });

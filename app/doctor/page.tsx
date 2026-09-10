@@ -1,6 +1,7 @@
 import { DoctorPortalClient } from "@/app/doctor/doctor-portal-client";
 import { DashboardHeader } from "@/components/nav";
 import { PageShell } from "@/components/ui";
+import { AssignedHospitalLocation } from "@/components/hospital-location-select";
 import { requireRole } from "@/lib/auth";
 import { formatDate, todayStart } from "@/lib/dates";
 import { type ServiceSlotType } from "@/lib/domain";
@@ -48,6 +49,9 @@ export default async function DoctorPage() {
   return (
     <PageShell>
       <DashboardHeader title="Doctor dashboard" name={user.name} role={`${user.hospital.name} · ${user.doctor?.department ?? "Doctor"}`} />
+      <div className="mb-6">
+        <AssignedHospitalLocation hospital={user.hospital} />
+      </div>
       <DoctorPortalClient
         doctorName={user.name}
         roleLabel={user.doctor?.department ?? "Doctor"}

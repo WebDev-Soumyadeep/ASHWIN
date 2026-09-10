@@ -13,7 +13,7 @@ export function AshwinInfoContent({ panel }: { panel: AshwinInfoKey }) {
             <Users size={26} aria-hidden="true" />
           </div>
           <div>
-            <p className="text-2xl font-black text-[rgb(var(--text))]">Team Ashwin</p>
+            <p className="text-2xl font-black text-[rgb(var(--text))]">Team MedSynapse</p>
             <p className="text-sm text-[rgb(var(--text-muted))]">Managed by AIEM</p>
           </div>
         </div>
@@ -36,7 +36,7 @@ export function AshwinInfoContent({ panel }: { panel: AshwinInfoKey }) {
           </div>
           <div>
             <p className="text-2xl font-black text-[rgb(var(--text))]">Contact Us</p>
-            <p className="text-sm text-[rgb(var(--text-muted))]">Reach Team Ashwin directly</p>
+            <p className="text-sm text-[rgb(var(--text-muted))]">Reach Team MedSynapse directly</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
@@ -50,12 +50,36 @@ export function AshwinInfoContent({ panel }: { panel: AshwinInfoKey }) {
             </a>
           </div>
           <div>
-            <p className="font-semibold text-[rgb(var(--text))]">Sayan Das</p>
+            <p className="font-semibold text-[rgb(var(--text))]">Shayan Das Bairagya</p>
             <a
-              href="mailto:dassayan5411@gmail.com"
+              href="mailto:shayandasbairagya2003@gmail.com"
               className="text-clinic underline underline-offset-2"
             >
-              dassayan5411@gmail.com
+              shayandasbairagya2003@gmail.com
+            </a>
+          </div>
+          <div>
+            <p className="font-semibold text-[rgb(var(--text))]">Rishita Ghosh</p>
+            <a href="mailto:rishitaghosh0208@gmail.com" className="text-clinic underline underline-offset-2">
+              rishitaghosh0208@gmail.com
+            </a>
+          </div>
+          <div>
+            <p className="font-semibold text-[rgb(var(--text))]">Ch Goutam Achary</p>
+            <a href="mailto:goutamfrom6thdimension@gmail.com" className="text-clinic underline underline-offset-2">
+              goutamfrom6thdimension@gmail.com
+            </a>
+          </div>
+          <div>
+            <p className="font-semibold text-[rgb(var(--text))]">Traymbak Roy</p>
+            <a href="mailto:traymbakroy36@gmail.com" className="text-clinic underline underline-offset-2">
+              traymbakroy36@gmail.com
+            </a>
+          </div>
+          <div>
+            <p className="font-semibold text-[rgb(var(--text))]">Debanath Mandal</p>
+            <a href="mailto:amitmandal0209@gmail.com" className="text-clinic underline underline-offset-2">
+              amitmandal0209@gmail.com
             </a>
           </div>
         </div>

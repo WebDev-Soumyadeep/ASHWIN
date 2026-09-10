@@ -9,7 +9,14 @@ datasource db {
 
 model Hospital {
   id               String               @id @default(cuid())
-  name             String               @unique
+  name             String
+  state            String               @default("West Bengal")
+  district         String               @default("Unassigned")
+  sourceId         String?              @unique
+  category         String               @default("Government")
+  isActive         Boolean              @default(true)
+  sourceUpdatedAt  DateTime?
+  importedAt       DateTime?
   users            User[]
   appointments     Appointment[]
   diagnostics      DiagnosticBooking[]
@@ -23,6 +30,9 @@ model Hospital {
   otpCodes         OtpCode[]
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
+
+  @@unique([name, state, district])
+  @@index([state, district, isActive])
 }
 
 model User {

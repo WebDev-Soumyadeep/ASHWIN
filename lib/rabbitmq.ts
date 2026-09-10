@@ -1,16 +1,16 @@
 import amqp from "amqplib";
 import type { Role } from "@/lib/domain";
 
-export const OTP_QUEUE = "ideajam.otp.email";
+export const OTP_QUEUE = "ideajam.otp.display";
 
-export type OtpEmailJob = {
+export type OtpDisplayJob = {
   email: string;
   name: string;
   role: Role;
   code: string;
 };
 
-export async function enqueueOtpEmail(job: OtpEmailJob) {
+export async function enqueueOtpDisplay(job: OtpDisplayJob) {
   const url = process.env.RABBITMQ_URL ?? "amqp://localhost";
 
   try {
@@ -24,16 +24,6 @@ export async function enqueueOtpEmail(job: OtpEmailJob) {
     await channel.close();
     await connection.close();
   } catch (error) {
-    if (process.env.OTP_DEV_FALLBACK === "true") {
-      console.log("[OTP_DEV_FALLBACK]", {
-        email: job.email,
-        role: job.role,
-        code: job.code,
-        reason: error instanceof Error ? error.message : "RabbitMQ unavailable"
-      });
-      return;
-    }
-
     throw error;
   }
 }

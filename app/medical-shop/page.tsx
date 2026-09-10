@@ -1,5 +1,6 @@
 import { DashboardHeader } from "@/components/nav";
 import { PageShell } from "@/components/ui";
+import { AssignedHospitalLocation } from "@/components/hospital-location-select";
 import { requireRole } from "@/lib/auth";
 import { formatDate, todayStart } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
@@ -142,6 +143,9 @@ export default async function MedicalShopPage({
   return (
     <PageShell>
       <DashboardHeader title="Medical shop" name={user.name} role={user.hospital.name} />
+      <div className="mb-6">
+        <AssignedHospitalLocation hospital={user.hospital} />
+      </div>
       <MedicalShopPortalClient
         shopName={user.name}
         hospitalName={user.hospital.name}

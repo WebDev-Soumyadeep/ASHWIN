@@ -32,6 +32,7 @@ import { AshwinInfoContent, type AshwinInfoKey } from "@/components/ashwin-info-
 import { Button, Input, Panel, SectionTitle, Select, Textarea } from "@/components/ui";
 import { APPOINTMENT_TYPES, appointmentTypeLabel, type ServiceSlotType } from "@/lib/domain";
 import { cn } from "@/lib/utils";
+import { HospitalLocationSelect } from "@/components/hospital-location-select";
 
 type PageView = "home" | AshwinInfoKey;
 
@@ -57,6 +58,8 @@ type DoctorItem = {
 type HospitalItem = {
   id: string;
   name: string;
+  state: string;
+  district: string;
 };
 
 type BloodBankItem = {
@@ -265,20 +268,13 @@ export function PatientPortalClient({
 
           {view === "home" ? (
             <div className="grid gap-3 rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4 md:grid-cols-[1fr_auto] md:items-end">
-              <Select
-                label="Preferred hospital"
-                value={selectedHospitalId}
-                onChange={(event) => {
-                  const nextHospitalId = event.target.value;
-                  window.location.href = nextHospitalId ? `/patient?hospital=${nextHospitalId}` : "/patient";
+              <HospitalLocationSelect
+                hospitals={hospitals}
+                initialHospitalId={selectedHospitalId}
+                onHospitalChange={(nextHospitalId) => {
+                  if (nextHospitalId) window.location.href = `/patient?hospital=${nextHospitalId}`;
                 }}
-              >
-                {hospitals.map((hospital) => (
-                  <option key={hospital.id} value={hospital.id}>
-                    {hospital.name}
-                  </option>
-                ))}
-              </Select>
+              />
               <p className="text-sm text-[rgb(var(--text-muted))]">
                 Slots below are live for the selected hospital only.
               </p>

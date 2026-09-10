@@ -18,7 +18,7 @@ export default async function PatientPage({
   searchParams?: Promise<{ hospital?: string }>;
 }) {
   const user = await requireRole("PATIENT");
-  const hospitals = await prisma.hospital.findMany({ orderBy: { name: "asc" } });
+  const hospitals = await prisma.hospital.findMany({ where: { isActive: true }, orderBy: [{ state: "asc" }, { district: "asc" }, { name: "asc" }] });
   const params = searchParams ? await searchParams : undefined;
   const selectedHospital =
     hospitals.find((hospital) => hospital.id === params?.hospital) ?? hospitals[0] ?? null;
@@ -65,7 +65,9 @@ export default async function PatientPage({
         }))}
         hospitals={hospitals.map((hospital) => ({
           id: hospital.id,
-          name: hospital.name
+          name: hospital.name,
+          state: hospital.state,
+          district: hospital.district
         }))}
         selectedHospitalId={selectedHospitalId}
         doctors={doctors.map((doctor) => ({

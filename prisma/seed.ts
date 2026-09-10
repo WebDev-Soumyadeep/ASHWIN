@@ -12,14 +12,14 @@ const todayAtMidnight = () => {
 async function main() {
   for (const hospitalName of PREFERRED_HOSPITALS) {
     await prisma.hospital.upsert({
-      where: { name: hospitalName },
+      where: { name_state_district: { name: hospitalName, state: "West Bengal", district: "Unassigned" } },
       update: {},
-      create: { name: hospitalName }
+      create: { name: hospitalName, state: "West Bengal", district: "Unassigned", category: "Government" }
     });
   }
 
   const defaultHospital = await prisma.hospital.findUnique({
-    where: { name: PREFERRED_HOSPITALS[0] }
+    where: { name_state_district: { name: PREFERRED_HOSPITALS[0], state: "West Bengal", district: "Unassigned" } }
   });
 
   if (!defaultHospital) {

@@ -1,7 +1,11 @@
 import bcrypt from "bcryptjs";
 import type { Role } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
+<<<<<<< Updated upstream
 import { sendOtpEmail } from "@/lib/mail";
+=======
+import { enqueueOtpDisplay } from "@/lib/rabbitmq";
+>>>>>>> Stashed changes
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -33,7 +37,11 @@ export async function createAndSendOtp(input: {
     }
   });
 
+<<<<<<< Updated upstream
   await sendOtpEmail({
+=======
+  await enqueueOtpDisplay({
+>>>>>>> Stashed changes
     email,
     name: input.name.trim(),
     role: input.role,
@@ -43,7 +51,7 @@ export async function createAndSendOtp(input: {
   return {
     email,
     expiresAt,
-    devCode: process.env.OTP_DEV_FALLBACK === "true" ? code : null
+    code
   };
 }
 

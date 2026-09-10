@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   experimental: {
     serverActions: {
-      bodySizeLimit: "2mb"
+      // The official National Hospital Directory CSV is approximately 10 MB.
+      bodySizeLimit: "25mb"
     }
   }
 };

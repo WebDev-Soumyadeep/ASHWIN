@@ -4,14 +4,19 @@ import { useState } from "react";
 import { CalendarPlus } from "lucide-react";
 import { bookAppointmentAction } from "@/app/actions";
 import { Button, Input, Select, Textarea } from "@/components/ui";
-import { PREFERRED_HOSPITALS, appointmentTypeLabel } from "@/lib/domain";
+import { HospitalLocationSelect } from "@/components/hospital-location-select";
+import { appointmentTypeLabel } from "@/lib/domain";
+import type { HospitalLocation } from "@/lib/hospital-directory";
 
 export function AppointmentBookingForm({
-  disabled
+  disabled,
+  hospitals
 }: {
   disabled: boolean;
+  hospitals: HospitalLocation[];
 }) {
   const [type, setType] = useState("CONSULTATION");
+  const [hospitalId, setHospitalId] = useState("");
   const needsAadhaar = type !== "CONSULTATION";
 
   return (
@@ -27,16 +32,8 @@ export function AppointmentBookingForm({
         <option value="PREGNANT">{appointmentTypeLabel("PREGNANT")}</option>
         <option value="SERIOUS_ILLNESS">{appointmentTypeLabel("SERIOUS_ILLNESS")}</option>
       </Select>
-      <Select label="Preferred hospital" name="preferredHospital" defaultValue="" required>
-        <option value="" disabled>
-          Select hospital
-        </option>
-        {PREFERRED_HOSPITALS.map((hospital) => (
-          <option key={hospital} value={hospital}>
-            {hospital}
-          </option>
-        ))}
-      </Select>
+      <HospitalLocationSelect hospitals={hospitals} required onHospitalChange={setHospitalId} />
+      <input type="hidden" name="preferredHospital" value={hospitals.find((hospital) => hospital.id === hospitalId)?.name ?? ""} />
       {needsAadhaar ? (
         <Input
           label="Aadhaar number"

@@ -11,7 +11,6 @@ import {
   BLOOD_REQUEST_STATUSES,
   BLOOD_TYPES,
   DIAGNOSTIC_TYPES,
-  PREFERRED_HOSPITALS,
   ROLES,
   SERVICE_SLOT_DEFAULTS,
   SERVICE_SLOT_TYPES,
@@ -36,6 +35,8 @@ import {
   getTodaySlotConfig
 } from "@/lib/slots";
 import { todayStart } from "@/lib/dates";
+import { resolveActiveHospitalId } from "@/lib/hospital-directory";
+import { isSuperAdmin } from "@/lib/hospital-directory";
 
 const AMBULANCE_ASSIGNMENTS = [
   "Hospital assigned arrival in around 30 minutes from booking",
@@ -57,6 +58,67 @@ function asString(value: FormDataEntryValue | null) {
 function asOptionalString(value: FormDataEntryValue | null) {
   const parsed = asString(value);
   return parsed || undefined;
+}
+
+async function activeHospitalFromForm(formData: FormData) {
+  const hospitalId = await resolveActiveHospitalId(asOptionalString(formData.get("hospitalId")));
+  if (!hospitalId) throw new Error("Choose an active government hospital from the directory.");
+  return hospitalId;
+}
+
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [], field = "", quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === '"' && text[index + 1] === '"' && quoted) { field += '"'; index += 1; }
+    else if (character === '"') quoted = !quoted;
+    else if (character === "," && !quoted) { row.push(field.trim()); field = ""; }
+    else if ((character === "\n" || character === "\r") && !quoted) {
+      if (character === "\r" && text[index + 1] === "\n") index += 1;
+      row.push(field.trim()); if (row.some(Boolean)) rows.push(row); row = []; field = "";
+    } else field += character;
+  }
+  row.push(field.trim()); if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+function csvValue(record: Record<string, string>, names: string[]) {
+  const key = Object.keys(record).find((item) => names.includes(item.toLowerCase().replaceAll(/[^a-z0-9]/g, "")));
+  return key ? record[key].trim() : "";
+}
+
+export async function importHospitalDirectoryAction(_: unknown, formData: FormData) {
+  const user = await currentUser();
+  if (!user || !isSuperAdmin(user.email)) throw new Error("Only the configured super admin can import the hospital directory.");
+  const file = formData.get("directory");
+  if (!(file instanceof File) || !file.size || !file.name.toLowerCase().endsWith(".csv")) {
+    return { ok: false, message: "Upload the official hospital directory as a CSV file." };
+  }
+  const rows = parseCsv(await file.text());
+  const headers = rows.shift()?.map((header) => header.toLowerCase().replaceAll(/[^a-z0-9]/g, "")) ?? [];
+  if (!headers.length) return { ok: false, message: "The CSV has no header row." };
+  let imported = 0, rejected = 0;
+  await prisma.$transaction(async (tx) => {
+    await tx.hospital.updateMany({ where: { sourceId: { startsWith: "official:" } }, data: { isActive: false } });
+    for (const row of rows) {
+      const record = Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""]));
+      const name = csvValue(record, ["hospitalname", "facilityname", "name"]);
+      const state = csvValue(record, ["state", "statename", "stateut"]);
+      const district = csvValue(record, ["district", "districtname"]);
+      const category = csvValue(record, ["hospitalcategory", "category", "ownership", "facilitytype"]);
+      const sourceId = csvValue(record, ["sourceid", "hospitalid", "facilityid", "srno", "srno"]);
+      if (!name || !state || !district || !/(government|govt|public)/i.test(category)) { rejected += 1; continue; }
+      const stableSourceId = sourceId ? `official:${sourceId}` : `official:${state}:${district}:${name}`;
+      const existing = await tx.hospital.findFirst({ where: { OR: [{ sourceId: stableSourceId }, { name, state, district }] } });
+      const data = { name, state, district, sourceId: stableSourceId, category, isActive: true, importedAt: new Date() };
+      if (existing) await tx.hospital.update({ where: { id: existing.id }, data });
+      else await tx.hospital.create({ data });
+      imported += 1;
+    }
+  });
+  revalidatePath("/auth"); revalidatePath("/patient"); revalidatePath("/doctor"); revalidatePath("/admin"); revalidatePath("/medical-shop");
+  return { ok: true, message: `Imported ${imported} government hospitals. Rejected ${rejected} rows without a verified public/government classification or location.` };
 }
 
 async function savePrescriptionUpload(
@@ -105,18 +167,6 @@ function defaultAssignedTiming(serviceType: ServiceSlotType) {
 
 function validAadhaar(value: string) {
   return /^\d{12}$/.test(value);
-}
-
-async function resolveHospitalId(value: string | undefined) {
-  if (!value) return undefined;
-
-  const hospital = await prisma.hospital.findFirst({
-    where: {
-      OR: [{ id: value }, { name: value }]
-    }
-  });
-
-  return hospital?.id;
 }
 
 async function syncTelemedicineBooking(
@@ -193,10 +243,6 @@ async function createConsultationBooking({
     throw new Error("Elder age, pregnant, and serious illness booking limit is 2 per day for one email.");
   }
 
-  if (!PREFERRED_HOSPITALS.includes(preferredHospital as (typeof PREFERRED_HOSPITALS)[number])) {
-    throw new Error("Choose a preferred hospital from the list.");
-  }
-
   if (consultationType !== "CONSULTATION" && !validAadhaar(aadhaar ?? "")) {
     throw new Error("A 12 digit Aadhaar number is required for this consultation type.");
   }
@@ -266,7 +312,7 @@ export async function requestOtpAction(_: unknown, formData: FormData) {
   const name = asString(formData.get("name"));
   const email = normalizeEmail(asString(formData.get("email")));
   const hospitalValue = asOptionalString(formData.get("hospitalId"));
-  const hospitalId = await resolveHospitalId(hospitalValue);
+  const hospitalId = await resolveActiveHospitalId(hospitalValue);
 
   if (!name || !email || !ROLES.includes(role)) {
     return { ok: false, message: "Name, email, and role are required." };
@@ -278,9 +324,8 @@ export async function requestOtpAction(_: unknown, formData: FormData) {
   const result = await createAndSendOtp({ email, name, role, hospitalId });
   return {
     ok: true,
-    message: result.devCode
-      ? `OTP generated. Dev OTP: ${result.devCode}`
-      : "OTP sent to Gmail.",
+    message: "OTP generated through the local queue.",
+    otpCode: result.code,
     email,
     name,
     role,
@@ -292,7 +337,7 @@ export async function verifyOtpAction(_: unknown, formData: FormData) {
   const role = asString(formData.get("role")) as Role;
   const email = normalizeEmail(asString(formData.get("email")));
   const code = asString(formData.get("code"));
-  const hospitalId = await resolveHospitalId(asOptionalString(formData.get("hospitalId")));
+  const hospitalId = await resolveActiveHospitalId(asOptionalString(formData.get("hospitalId")));
 
   const result = await verifyOtp({ email, role, code, hospitalId });
   if (!result.ok) {
@@ -453,7 +498,7 @@ export async function updateBloodBankAction(formData: FormData) {
 export async function bookAppointmentAction(formData: FormData) {
   const user = await currentUser();
   if (user?.role !== "PATIENT") redirect("/auth");
-  const hospitalId = asString(formData.get("hospitalId"));
+  const hospitalId = await activeHospitalFromForm(formData);
 
   const appointmentType = asString(formData.get("appointmentType")) as AppointmentType;
   if (!APPOINTMENT_TYPES.includes(appointmentType)) {
@@ -529,7 +574,7 @@ export async function allocateEmergencyAction(formData: FormData) {
 export async function bookDiagnosticAction(formData: FormData) {
   const user = await currentUser();
   if (user?.role !== "PATIENT") redirect("/auth");
-  const hospitalId = asString(formData.get("hospitalId"));
+  const hospitalId = await activeHospitalFromForm(formData);
 
   const type = asString(formData.get("type")) as DiagnosticType;
   if (!DIAGNOSTIC_TYPES.includes(type)) return;
@@ -596,7 +641,7 @@ export async function bookDiagnosticAction(formData: FormData) {
 export async function createServiceBookingAction(formData: FormData) {
   const user = await currentUser();
   if (user?.role !== "PATIENT") redirect("/auth");
-  const hospitalId = asString(formData.get("hospitalId"));
+  const hospitalId = await activeHospitalFromForm(formData);
 
   const serviceType = asString(formData.get("serviceType")) as ServiceSlotType;
   if (!SERVICE_SLOT_TYPES.includes(serviceType)) {
@@ -695,7 +740,7 @@ export async function createServiceBookingAction(formData: FormData) {
 export async function requestTelemedicineAction(formData: FormData) {
   const user = await currentUser();
   if (user?.role !== "PATIENT") redirect("/auth");
-  const hospitalId = asString(formData.get("hospitalId"));
+  const hospitalId = await activeHospitalFromForm(formData);
 
   const serviceConfigs = await getServiceSlotConfigs(todayStart(), hospitalId);
   const config = serviceConfigs.find((entry) => entry.serviceType === "TELEMEDICINE");
@@ -784,7 +829,7 @@ export async function savePrescriptionAction(
 export async function requestBloodAction(formData: FormData) {
   const user = await currentUser();
   if (user?.role !== "PATIENT") redirect("/auth");
-  const hospitalId = asString(formData.get("hospitalId"));
+  const hospitalId = await activeHospitalFromForm(formData);
 
   const bloodType = asString(formData.get("bloodType")) as BloodType;
   const pouches = asInt(formData.get("pouches"), 1);

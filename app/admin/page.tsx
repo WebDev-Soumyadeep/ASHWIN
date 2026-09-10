@@ -2,6 +2,7 @@ import { updateServiceBookingStatusAction } from "@/app/actions";
 import { AdminServicePanelClient } from "@/app/admin/admin-service-panel-client";
 import { DashboardHeader } from "@/components/nav";
 import { Button, PageShell, Panel, SectionTitle } from "@/components/ui";
+import { AssignedHospitalLocation } from "@/components/hospital-location-select";
 import { requireRole } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
 import {
@@ -42,6 +43,9 @@ export default async function AdminPage() {
   return (
     <PageShell>
       <DashboardHeader title="Hospital administration" name={user.name} role={user.hospital.name} />
+      <div className="mb-6">
+        <AssignedHospitalLocation hospital={user.hospital} />
+      </div>
 
       <AdminServicePanelClient
         adminName={user.name}
