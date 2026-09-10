@@ -1,11 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Role } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
-<<<<<<< Updated upstream
-import { sendOtpEmail } from "@/lib/mail";
-=======
 import { enqueueOtpDisplay } from "@/lib/rabbitmq";
->>>>>>> Stashed changes
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -36,17 +32,12 @@ export async function createAndSendOtp(input: {
       expiresAt
     }
   });
-
-<<<<<<< Updated upstream
-  await sendOtpEmail({
-=======
-  await enqueueOtpDisplay({
->>>>>>> Stashed changes
-    email,
-    name: input.name.trim(),
-    role: input.role,
-    code
-  });
+await enqueueOtpDisplay({
+  email,
+  name: input.name.trim(),
+  role: input.role,
+  code
+});
 
   return {
     email,
@@ -62,6 +53,7 @@ export async function verifyOtp(input: {
   hospitalId?: string;
 }) {
   const email = normalizeEmail(input.email);
+
   const otp = await prisma.otpCode.findFirst({
     where: {
       email,
@@ -78,6 +70,7 @@ export async function verifyOtp(input: {
   }
 
   const matches = await bcrypt.compare(input.code.trim(), otp.codeHash);
+
   if (!matches) {
     return { ok: false as const, message: "Invalid OTP." };
   }
